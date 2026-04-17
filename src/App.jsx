@@ -643,7 +643,7 @@ export default function App() {
         </div>
 
         {userTab === "equipment" && (
-          <div>
+          <div style={{ width: "100%" }}>
             {notice ? (
               <div style={s.noticeBox}>
                 <p style={{ fontSize: 12, color: "#666", marginBottom: 4, marginTop: 0 }}>공지</p>
