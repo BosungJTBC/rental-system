@@ -53,6 +53,31 @@ function ActionModal({ actionModal, onClose, onConfirm, s }) {
   return (
     <div style={s.overlay} onClick={onClose}>
       <div style={s.modal} onClick={e => e.stopPropagation()}>
+        {userTab === "status" && (
+          <div>
+            {rentals.filter(r => r.status === "approved").length === 0 && (
+              <p style={{ fontSize: 14, color: "#666" }}>현재 대여 중인 장비가 없습니다.</p>
+            )}
+            {rentals.filter(r => r.status === "approved").map(r => (
+              <div key={r.id} style={s.card}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
+                  {r.items && r.items.map(i => (
+                    <span key={i.equipmentId} style={{ display: "inline-block", fontSize: 13, background: "#faece7", color: "#993C1D", borderRadius: 4, padding: "2px 10px", fontWeight: 500 }}>{i.equipmentName} {i.qty}대</span>
+                  ))}
+                </div>
+                <div style={{ fontSize: 13, color: "#666", marginBottom: 6 }}>
+                  대여 기간: <span style={{ color: "#111", fontWeight: 500 }}>{r.start_date} ~ {r.end_date}</span>
+                </div>
+                <div style={{ display: "flex", gap: 16, fontSize: 13, color: "#666" }}>
+                  <span>담당자: <span style={{ color: "#111" }}>{r.user_name}</span></span>
+                  <span>부서: <span style={{ color: "#111" }}>{r.user_department || "-"}</span></span>
+                  <span>연락처: <span style={{ color: "#111" }}>{r.user_phone}</span></span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <p style={{ fontWeight: 500, fontSize: 16, marginBottom: 6 }}>{isApprove ? "대여 승인" : "대여 반려"}</p>
         <p style={{ fontSize: 13, color: "#666", marginBottom: 14 }}>메모를 남기면 대여자에게도 표시됩니다.</p>
         <div style={{ marginBottom: 20 }}>
@@ -613,6 +638,7 @@ export default function App() {
           <button style={s.tab(userTab === "equipment")} onClick={() => setUserTab("equipment")}>
             장비 목록{activeCart ? <span style={{ background: "#185FA5", color: "#fff", borderRadius: 99, fontSize: 11, padding: "1px 6px", marginLeft: 5 }}>{cartItems.length}</span> : null}
           </button>
+          <button style={s.tab(userTab === "status")} onClick={() => setUserTab("status")}>대여 현황</button>
           <button style={s.tab(userTab === "myrentals")} onClick={() => setUserTab("myrentals")}>
             내 대여 현황{activeRentals > 0 ? <span style={{ background: "#185FA5", color: "#fff", borderRadius: 99, fontSize: 11, padding: "1px 6px", marginLeft: 5 }}>{activeRentals}</span> : null}
           </button>
