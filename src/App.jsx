@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
-const LAST_UPDATED = "2026-04-17 17:30";
+const LAST_UPDATED = "2026-04-17 21:35";
 const CATEGORIES = ["카메라", "렌즈", "마이크", "삼각대", "조명", "특수장비", "기타"];
 
 const RENTAL_STATUS = {
