@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
-const LAST_UPDATED = "2026-04-17 14:20";
+const LAST_UPDATED = "2026-04-17 14:35";
 const today = () => new Date().toISOString().split("T")[0];
 const TODAY = new Date().toISOString().split("T")[0];
 const CATEGORIES = ["카메라", "렌즈", "마이크", "삼각대", "조명", "특수장비", "기타"];
@@ -344,7 +344,7 @@ export default function App() {
   const myRentals = currentUser ? rentals.filter(r => r.user_id === currentUser.id) : [];
 
   const s = {
-    wrap: { fontFamily: "sans-serif", maxWidth: 1100, minWidth: 0, margin: "0 auto", padding: isMobile ? "16px 12px" : "24px 32px", color: "#111", boxSizing: "border-box" },
+    wrap: { fontFamily: "sans-serif", maxWidth: 1100, minWidth: 0, minHeight: "100vh", margin: "0 auto", padding: isMobile ? "16px 12px" : "24px 32px", color: "#111", boxSizing: "border-box", textAlign: "left" },
     header: { display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 10 : 0, marginBottom: 24, paddingBottom: 16, borderBottom: "0.5px solid #ddd" },
     title: { fontSize: isMobile ? 16 : 20, fontWeight: 500, margin: 0 },
     btn: { padding: "8px 14px", borderRadius: 8, border: "0.5px solid #ccc", background: "transparent", cursor: "pointer", fontSize: isMobile ? 13 : 14, color: "#111", whiteSpace: "nowrap" },
@@ -720,7 +720,7 @@ export default function App() {
         )}
 
         {userTab === "status" && (
-          <div>
+          <div style={{ width: "100%" }}>
             {currentlyRented.length === 0 && <p style={{ fontSize: 14, color: "#666" }}>현재 대여 중인 장비가 없습니다.</p>}
             {currentlyRented.map(r => (
               <div key={r.id} style={s.card}>
@@ -743,7 +743,7 @@ export default function App() {
         )}
 
         {userTab === "myrentals" && (
-          <div>
+          <div style={{ width: "100%" }}>
             {myRentals.length === 0 && <p style={{ fontSize: 14, color: "#666" }}>대여 신청 내역이 없습니다.</p>}
             {myRentals.map(r => <RentalCard key={r.id} r={r} s={s} onCancel={handleCancel} isUser />)}
           </div>
