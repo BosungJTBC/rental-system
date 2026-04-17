@@ -397,7 +397,7 @@ export default function App() {
   if (page === "login") return (
     <div style={s.wrap}>
       <div style={{ maxWidth: 400, margin: "40px auto" }}>
-        <h1 style={{ ...s.title, fontSize: 22, textAlign: "center", marginBottom: 8 }}>📷 장비 대여 시스템</h1>
+        <h1 style={{ ...s.title, fontSize: 22, textAlign: "center", marginBottom: 8 }}>JTBC 보도국 장비대여 시스템</h1>
         <p style={{ textAlign: "center", fontSize: 14, color: "#666", marginBottom: 28 }}>사내 촬영 장비 대여 관리</p>
         <div style={s.tabs}>
           <button style={s.tab(authTab === "login")} onClick={() => { setAuthTab("login"); setError(""); }}>로그인</button>
@@ -440,7 +440,7 @@ export default function App() {
         {actionModal && <ActionModal actionModal={actionModal} onClose={() => setActionModal(null)} onConfirm={handleAction} s={s} />}
         {showPwModal && <PwModal currentPassword={currentUser.password} onClose={() => setShowPwModal(false)} onConfirm={handleChangePw} s={s} />}
         <div style={s.header}>
-          <div><h1 style={s.title}>📷 장비 대여 시스템</h1><span style={{ fontSize: 13, color: "#666" }}>관리자 · {currentUser.name}</span></div>
+          <div>          <h1 style={s.title}>JTBC 보도국 장비대여 시스템</h1><span style={{ fontSize: 13, color: "#666" }}>관리자 · {currentUser.name}</span></div>
           <div style={{ display: "flex", gap: 8 }}>
             <button style={s.btn} onClick={() => setShowPwModal(true)}>비밀번호 변경</button>
             <button style={s.btn} onClick={() => { setCurrentUser(null); setPage("login"); }}>로그아웃</button>
@@ -600,7 +600,7 @@ export default function App() {
       <div style={s.wrap}>
         {showPwModal && <PwModal currentPassword={currentUser.password} onClose={() => setShowPwModal(false)} onConfirm={handleChangePw} s={s} />}
         <div style={s.header}>
-          <div><h1 style={s.title}>📷 JTBC 보도국 | 장비 대여 시스템</h1><span style={{ fontSize: 13, color: "#666" }}>{currentUser.name} ({currentUser.department})</span></div>
+          <div><h1 style={s.title}>📷 장비 대여 시스템</h1><span style={{ fontSize: 13, color: "#666" }}>{currentUser.name} ({currentUser.department})</span></div>
           <div style={{ display: "flex", gap: 8 }}>
             <button style={s.btn} onClick={() => setShowPwModal(true)}>비밀번호 변경</button>
             <button style={s.btn} onClick={() => { setCurrentUser(null); setPage("login"); }}>로그아웃</button>
