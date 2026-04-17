@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import emailjs from "@emailjs/browser";
+
+const EMAILJS_SERVICE_ID = "service_rb3wtur";
+const EMAILJS_TEMPLATE_ID = "template_whajf2c";
+const EMAILJS_PUBLIC_KEY = "XbVNihc2de5h98peh";
+
+emailjs.init(EMAILJS_PUBLIC_KEY);
 
 const LAST_UPDATED = "2026-04-17 14:35";
 const today = () => new Date().toISOString().split("T")[0];
@@ -313,6 +320,21 @@ export default function App() {
       note: rentalNote, status: "pending",
     }]);
     if (error) return setError("신청 중 오류가 발생했습니다.");
+
+    // 이메일 발송
+    try {
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        user_name: currentUser.name,
+        user_department: currentUser.department || "-",
+        user_phone: currentUser.phone,
+        items: cartItems.map(i => i.equipmentName + " " + i.qty + "대").join(", "),
+        start_date: rentalDates.start,
+        end_date: rentalDates.end,
+        note: rentalNote || "-",
+      }, EMAILJS_PUBLIC_KEY);
+    } catch (e) {
+      console.error("이메일 발송 실패:", e);
+    }
     setCart({}); setRentalNote(""); setRentalDates({ start: "", end: "" });
     setSuccess("대여 신청이 완료되었습니다."); setUserTab("myrentals"); await fetchAll();
   }
