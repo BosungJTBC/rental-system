@@ -36,6 +36,8 @@ function qtyByStatus(rentals, equipId, statuses) {
     }, 0);
 }
 
+const CATEGORIES = ["카메라", "렌즈", "마이크", "삼각대", "조명", "특수장비", "기타"];
+
 const RENTAL_STATUS = {
   pending:   { label: "승인 대기", bg: "#faeeda", color: "#854F0B" },
   approved:  { label: "대여 중",   bg: "#faece7", color: "#993C1D" },
@@ -179,9 +181,11 @@ export default function App() {
   const [authTab, setAuthTab] = useState("login");
   const [adminTab, setAdminTab] = useState("equipment");
   const [userTab, setUserTab] = useState("equipment");
-  const [newEquip, setNewEquip] = useState({ name: "", category: "", description: "", quantity: 1 });
+  const [newEquip, setNewEquip] = useState({ name: "", category: "카메라", description: "", quantity: 1 });
   const [editEquipId, setEditEquipId] = useState(null);
   const [editEquipForm, setEditEquipForm] = useState({});
+  const [adminCatFilter, setAdminCatFilter] = useState("전체");
+  const [userCatFilter, setUserCatFilter] = useState("전체");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [confirmDeleteEq, setConfirmDeleteEq] = useState(null);
@@ -384,7 +388,7 @@ export default function App() {
     statNum: { fontSize: 26, fontWeight: 500, margin: 0 },
     statLbl: { fontSize: 12, color: "#666", marginTop: 4 },
     qtyBadge: (avail, total) => ({ fontSize: 12, padding: "3px 10px", borderRadius: 99, fontWeight: 500, background: avail === 0 ? "#fcebeb" : avail < total ? "#faeeda" : "#eaf3de", color: avail === 0 ? "#A32D2D" : avail < total ? "#854F0B" : "#3B6D11" }),
-    overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
+    catFilter: (a) => ({ padding: "5px 12px", borderRadius: 99, border: a ? "none" : "0.5px solid #ccc", background: a ? "#185FA5" : "transparent", color: a ? "#fff" : "#666", cursor: "pointer", fontSize: 13, fontWeight: a ? 500 : 400 }),
     modal: { background: "#ffffff", border: "0.5px solid #ccc", borderRadius: 12, padding: "24px 28px", maxWidth: 340, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" },
   };
 
@@ -490,14 +494,23 @@ export default function App() {
               <p style={{ fontWeight: 500, fontSize: 14, marginBottom: 12 }}>장비 추가</p>
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 2fr 0.8fr auto", gap: 8, alignItems: "end" }}>
                 <div><label style={s.label}>장비명</label><input style={s.input} placeholder="장비명" value={newEquip.name} onChange={e => setNewEquip(p => ({ ...p, name: e.target.value }))} /></div>
-                <div><label style={s.label}>카테고리</label><input style={s.input} placeholder="카메라" value={newEquip.category} onChange={e => setNewEquip(p => ({ ...p, category: e.target.value }))} /></div>
+                <div><label style={s.label}>카테고리</label>
+                  <select style={s.input} value={newEquip.category} onChange={e => setNewEquip(p => ({ ...p, category: e.target.value }))}>
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
                 <div><label style={s.label}>설명 (선택)</label><input style={s.input} placeholder="설명" value={newEquip.description} onChange={e => setNewEquip(p => ({ ...p, description: e.target.value }))} /></div>
                 <div><label style={s.label}>수량</label><input style={s.input} type="number" min="1" value={newEquip.quantity} onChange={e => setNewEquip(p => ({ ...p, quantity: e.target.value }))} /></div>
                 <button style={{ ...s.btnPrimary, height: 37 }} onClick={handleAddEquipment}>추가</button>
               </div>
             </div>
 
-            {equipment.map((eq, index) => {
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+              {["전체", ...CATEGORIES].map(c => (
+                <button key={c} style={s.catFilter(adminCatFilter === c)} onClick={() => setAdminCatFilter(c)}>{c}</button>
+              ))}
+            </div>
+            {equipment.filter(eq => adminCatFilter === "전체" || eq.category === adminCatFilter).map((eq, index) => {
               const avail  = availableQty(equipment, rentals, eq.id, null, null);
               const rented = qtyByStatus(rentals, eq.id, ["approved"]);
               const pend   = qtyByStatus(rentals, eq.id, ["pending"]);
@@ -509,7 +522,11 @@ export default function App() {
                     <div>
                       <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 2fr", gap: 8, marginBottom: 10 }}>
                         <div><label style={s.label}>장비명</label><input style={s.input} value={editEquipForm.name} onChange={e => setEditEquipForm(p => ({ ...p, name: e.target.value }))} /></div>
-                        <div><label style={s.label}>카테고리</label><input style={s.input} value={editEquipForm.category} onChange={e => setEditEquipForm(p => ({ ...p, category: e.target.value }))} /></div>
+                        <div><label style={s.label}>카테고리</label>
+                          <select style={s.input} value={editEquipForm.category} onChange={e => setEditEquipForm(p => ({ ...p, category: e.target.value }))}>
+                            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
                         <div><label style={s.label}>설명</label><input style={s.input} value={editEquipForm.description} onChange={e => setEditEquipForm(p => ({ ...p, description: e.target.value }))} /></div>
                       </div>
                       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
@@ -611,8 +628,13 @@ export default function App() {
               </div>
               {datesSelected && <p style={{ fontSize: 12, color: "#185FA5", margin: "8px 0 0" }}>선택 기간 기준으로 대여 가능 수량이 표시됩니다.</p>}
             </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+              {["전체", ...CATEGORIES].map(c => (
+                <button key={c} style={s.catFilter(userCatFilter === c)} onClick={() => setUserCatFilter(c)}>{c}</button>
+              ))}
+            </div>
             <div style={{ marginBottom: 20 }}>
-              {equipment.map(eq => {
+              {equipment.filter(eq => userCatFilter === "전체" || eq.category === userCatFilter).map(eq => {
                 const avail = datesSelected
                   ? availableQty(equipment, rentals, eq.id, startDate, endDate)
                   : availableQty(equipment, rentals, eq.id, null, null);
