@@ -344,7 +344,7 @@ export default function App() {
   const myRentals = currentUser ? rentals.filter(r => r.user_id === currentUser.id) : [];
 
   const s = {
-    wrap: { fontFamily: "sans-serif", maxWidth: 1100, minWidth: 0, minHeight: "100vh", margin: "0 auto", padding: isMobile ? "16px 12px" : "24px 32px", color: "#111", boxSizing: "border-box", textAlign: "left" },
+    wrap: { fontFamily: "sans-serif", width: "100%", maxWidth: 1100, minWidth: 0, minHeight: "100vh", margin: "0 auto", padding: isMobile ? "16px 12px" : "24px 32px", color: "#111", boxSizing: "border-box", textAlign: "left" },
     header: { display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 10 : 0, marginBottom: 24, paddingBottom: 16, borderBottom: "0.5px solid #ddd" },
     title: { fontSize: isMobile ? 16 : 20, fontWeight: 500, margin: 0 },
     btn: { padding: "8px 14px", borderRadius: 8, border: "0.5px solid #ccc", background: "transparent", cursor: "pointer", fontSize: isMobile ? 13 : 14, color: "#111", whiteSpace: "nowrap" },
