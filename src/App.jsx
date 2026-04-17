@@ -1,7 +1,17 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
+const VERSION = "v1.6.0";
 const today = () => new Date().toISOString().split("T")[0];
+const CATEGORIES = ["카메라", "렌즈", "마이크", "삼각대", "조명", "특수장비", "기타"];
+
+const RENTAL_STATUS = {
+  pending:   { label: "승인 대기", bg: "#faeeda", color: "#854F0B" },
+  approved:  { label: "대여 중",   bg: "#faece7", color: "#993C1D" },
+  returned:  { label: "반납 완료", bg: "#eaf3de", color: "#3B6D11" },
+  rejected:  { label: "반려됨",    bg: "#fcebeb", color: "#A32D2D" },
+  cancelled: { label: "취소됨",    bg: "#f1efe8", color: "#5F5E5A" },
+};
 
 function datesOverlap(s1, e1, s2, e2) {
   return s1 <= e2 && e1 >= s2;
@@ -36,69 +46,43 @@ function qtyByStatus(rentals, equipId, statuses) {
     }, 0);
 }
 
-const CATEGORIES = ["카메라", "렌즈", "마이크", "삼각대", "조명", "특수장비", "기타"];
-
-const RENTAL_STATUS = {
-  pending:   { label: "승인 대기", bg: "#faeeda", color: "#854F0B" },
-  approved:  { label: "대여 중",   bg: "#faece7", color: "#993C1D" },
-  returned:  { label: "반납 완료", bg: "#eaf3de", color: "#3B6D11" },
-  rejected:  { label: "반려됨",    bg: "#fcebeb", color: "#A32D2D" },
-  cancelled: { label: "취소됨",    bg: "#f1efe8", color: "#5F5E5A" },
-};
+// 모달 공통 래퍼
+function ModalWrap({ onClose, children }) {
+  return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }} onClick={onClose}>
+      <div style={{ background: "#fff", border: "0.5px solid #ccc", borderRadius: 12, padding: "24px 28px", maxWidth: 360, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }} onClick={e => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function ActionModal({ actionModal, onClose, onConfirm, s }) {
   const [memo, setMemo] = useState("");
   if (!actionModal) return null;
   const isApprove = actionModal.type === "approve";
   return (
-    <div style={s.overlay} onClick={onClose}>
-      <div style={s.modal} onClick={e => e.stopPropagation()}>
-        {userTab === "status" && (
-          <div>
-            {rentals.filter(r => r.status === "approved").length === 0 && (
-              <p style={{ fontSize: 14, color: "#666" }}>현재 대여 중인 장비가 없습니다.</p>
-            )}
-            {rentals.filter(r => r.status === "approved").map(r => (
-              <div key={r.id} style={s.card}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
-                  {r.items && r.items.map(i => (
-                    <span key={i.equipmentId} style={{ display: "inline-block", fontSize: 13, background: "#faece7", color: "#993C1D", borderRadius: 4, padding: "2px 10px", fontWeight: 500 }}>{i.equipmentName} {i.qty}대</span>
-                  ))}
-                </div>
-                <div style={{ fontSize: 13, color: "#666", marginBottom: 6 }}>
-                  대여 기간: <span style={{ color: "#111", fontWeight: 500 }}>{r.start_date} ~ {r.end_date}</span>
-                </div>
-                <div style={{ display: "flex", gap: 16, fontSize: 13, color: "#666" }}>
-                  <span>담당자: <span style={{ color: "#111" }}>{r.user_name}</span></span>
-                  <span>부서: <span style={{ color: "#111" }}>{r.user_department || "-"}</span></span>
-                  <span>연락처: <span style={{ color: "#111" }}>{r.user_phone}</span></span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <p style={{ fontWeight: 500, fontSize: 16, marginBottom: 6 }}>{isApprove ? "대여 승인" : "대여 반려"}</p>
-        <p style={{ fontSize: 13, color: "#666", marginBottom: 14 }}>메모를 남기면 대여자에게도 표시됩니다.</p>
-        <div style={{ marginBottom: 20 }}>
-          <label style={s.label}>메모 (선택)</label>
-          <textarea
-            style={{ ...s.input, resize: "vertical", minHeight: 80, fontFamily: "sans-serif" }}
-            placeholder={isApprove ? "예) 배터리 2개 포함, 렌즈 캡 없음 확인" : "예) 해당 기간 이미 예약됨"}
-            value={memo}
-            onChange={e => setMemo(e.target.value)}
-            autoFocus
-          />
-        </div>
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button style={s.btn} onClick={onClose}>취소</button>
-          <button
-            style={isApprove ? s.btnPrimary : { ...s.btnDanger, padding: "8px 16px", border: "none", background: "#A32D2D", color: "#fff" }}
-            onClick={() => onConfirm(memo)}
-          >{isApprove ? "승인" : "반려"}</button>
-        </div>
+    <ModalWrap onClose={onClose}>
+      <p style={{ fontWeight: 500, fontSize: 16, marginBottom: 6 }}>{isApprove ? "대여 승인" : "대여 반려"}</p>
+      <p style={{ fontSize: 13, color: "#666", marginBottom: 14 }}>메모를 남기면 대여자에게도 표시됩니다.</p>
+      <div style={{ marginBottom: 20 }}>
+        <label style={s.label}>메모 (선택)</label>
+        <textarea
+          style={{ ...s.input, resize: "vertical", minHeight: 80, fontFamily: "sans-serif" }}
+          placeholder={isApprove ? "예) 배터리 2개 포함, 렌즈 캡 없음 확인" : "예) 해당 기간 이미 예약됨"}
+          value={memo}
+          onChange={e => setMemo(e.target.value)}
+          autoFocus
+        />
       </div>
-    </div>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button style={s.btn} onClick={onClose}>취소</button>
+        <button
+          style={isApprove ? s.btnPrimary : { ...s.btnDanger, padding: "8px 16px", border: "none", background: "#A32D2D", color: "#fff" }}
+          onClick={() => onConfirm(memo)}
+        >{isApprove ? "승인" : "반려"}</button>
+      </div>
+    </ModalWrap>
   );
 }
 
@@ -114,37 +98,33 @@ function PwModal({ onClose, onConfirm, currentPassword, s }) {
     onConfirm(pwForm.next);
   };
   return (
-    <div style={s.overlay} onClick={onClose}>
-      <div style={s.modal} onClick={e => e.stopPropagation()}>
-        <p style={{ fontWeight: 500, fontSize: 16, marginBottom: 16 }}>비밀번호 변경</p>
-        {pwError && <div style={{ ...s.alert("error"), marginBottom: 12 }}>{pwError}</div>}
-        <div style={{ marginBottom: 12 }}><label style={s.label}>현재 비밀번호</label><input style={s.input} type="password" value={pwForm.current} onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))} /></div>
-        <div style={{ marginBottom: 12 }}><label style={s.label}>새 비밀번호</label><input style={s.input} type="password" value={pwForm.next} onChange={e => setPwForm(p => ({ ...p, next: e.target.value }))} /></div>
-        <div style={{ marginBottom: 20 }}><label style={s.label}>새 비밀번호 확인</label><input style={s.input} type="password" value={pwForm.confirm} onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))} onKeyDown={e => e.key === "Enter" && handle()} /></div>
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button style={s.btn} onClick={onClose}>취소</button>
-          <button style={s.btnPrimary} onClick={handle}>변경</button>
-        </div>
+    <ModalWrap onClose={onClose}>
+      <p style={{ fontWeight: 500, fontSize: 16, marginBottom: 16 }}>비밀번호 변경</p>
+      {pwError && <div style={{ ...s.alert("error"), marginBottom: 12 }}>{pwError}</div>}
+      <div style={{ marginBottom: 12 }}><label style={s.label}>현재 비밀번호</label><input style={s.input} type="password" value={pwForm.current} onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))} /></div>
+      <div style={{ marginBottom: 12 }}><label style={s.label}>새 비밀번호</label><input style={s.input} type="password" value={pwForm.next} onChange={e => setPwForm(p => ({ ...p, next: e.target.value }))} /></div>
+      <div style={{ marginBottom: 20 }}><label style={s.label}>새 비밀번호 확인</label><input style={s.input} type="password" value={pwForm.confirm} onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))} onKeyDown={e => e.key === "Enter" && handle()} /></div>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button style={s.btn} onClick={onClose}>취소</button>
+        <button style={s.btnPrimary} onClick={handle}>변경</button>
       </div>
-    </div>
+    </ModalWrap>
   );
 }
 
 function DeleteModal({ eq, onClose, onConfirm, s }) {
   if (!eq) return null;
   return (
-    <div style={s.overlay} onClick={onClose}>
-      <div style={s.modal} onClick={e => e.stopPropagation()}>
-        <p style={{ fontWeight: 500, fontSize: 16, marginBottom: 8 }}>장비 삭제</p>
-        <p style={{ fontSize: 14, color: "#666", marginBottom: 20 }}>
-          <strong style={{ color: "#111" }}>{eq.name}</strong>을(를) 삭제하시겠습니까?<br />이 작업은 되돌릴 수 없습니다.
-        </p>
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button style={s.btn} onClick={onClose}>취소</button>
-          <button style={{ ...s.btnDanger, padding: "8px 16px", border: "none", background: "#A32D2D", color: "#fff" }} onClick={onConfirm}>삭제</button>
-        </div>
+    <ModalWrap onClose={onClose}>
+      <p style={{ fontWeight: 500, fontSize: 16, marginBottom: 8 }}>장비 삭제</p>
+      <p style={{ fontSize: 14, color: "#666", marginBottom: 20 }}>
+        <strong style={{ color: "#111" }}>{eq.name}</strong>을(를) 삭제하시겠습니까?<br />이 작업은 되돌릴 수 없습니다.
+      </p>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button style={s.btn} onClick={onClose}>취소</button>
+        <button style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#A32D2D", color: "#fff", cursor: "pointer", fontSize: 14 }} onClick={onConfirm}>삭제</button>
       </div>
-    </div>
+    </ModalWrap>
   );
 }
 
@@ -239,7 +219,13 @@ export default function App() {
     if (orderSetting) {
       try {
         const order = JSON.parse(orderSetting.value);
-        orderedEq = [...orderedEq].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+        orderedEq = [...orderedEq].sort((a, b) => {
+          const ai = order.indexOf(a.id);
+          const bi = order.indexOf(b.id);
+          if (ai === -1) return 1;
+          if (bi === -1) return -1;
+          return ai - bi;
+        });
       } catch {}
     }
     setEquipment(orderedEq);
@@ -283,9 +269,8 @@ export default function App() {
     if (newEquip.quantity < 1) return setError("수량은 1 이상이어야 합니다.");
     const { error } = await supabase.from("equipment").insert([{ ...newEquip, quantity: Number(newEquip.quantity) }]);
     if (error) return setError("장비 추가 중 오류가 발생했습니다.");
-    setNewEquip({ name: "", category: "", description: "", quantity: 1 });
-    setSuccess("장비가 추가되었습니다.");
-    setError("");
+    setNewEquip({ name: "", category: "카메라", description: "", quantity: 1 });
+    setSuccess("장비가 추가되었습니다."); setError("");
     await fetchAll();
   }
 
@@ -293,8 +278,7 @@ export default function App() {
     const inUse = qtyByStatus(rentals, id, ["approved", "pending"]) > 0;
     if (inUse) { setError("현재 대여 중이거나 승인 대기 중인 장비는 삭제할 수 없습니다."); setConfirmDeleteEq(null); return; }
     await supabase.from("equipment").delete().eq("id", id);
-    setSuccess("장비가 삭제되었습니다.");
-    setConfirmDeleteEq(null);
+    setSuccess("장비가 삭제되었습니다."); setConfirmDeleteEq(null);
     await fetchAll();
   }
 
@@ -304,8 +288,7 @@ export default function App() {
     if (n < minQty) return setError("현재 대여/대기 수량(" + minQty + "대)보다 낮게 설정할 수 없습니다.");
     if (n < 1) return;
     await supabase.from("equipment").update({ quantity: n }).eq("id", id);
-    setError("");
-    await fetchAll();
+    setError(""); await fetchAll();
   }
 
   async function handleUpdateEquip(id) {
@@ -414,16 +397,17 @@ export default function App() {
     statLbl: { fontSize: 12, color: "#666", marginTop: 4 },
     qtyBadge: (avail, total) => ({ fontSize: 12, padding: "3px 10px", borderRadius: 99, fontWeight: 500, background: avail === 0 ? "#fcebeb" : avail < total ? "#faeeda" : "#eaf3de", color: avail === 0 ? "#A32D2D" : avail < total ? "#854F0B" : "#3B6D11" }),
     catFilter: (a) => ({ padding: "5px 12px", borderRadius: 99, border: a ? "none" : "0.5px solid #ccc", background: a ? "#185FA5" : "transparent", color: a ? "#fff" : "#666", cursor: "pointer", fontSize: 13, fontWeight: a ? 500 : 400 }),
-    modal: { background: "#ffffff", border: "0.5px solid #ccc", borderRadius: 12, padding: "24px 28px", maxWidth: 340, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" },
+    noticeBox: { marginBottom: 16, padding: "12px 18px", borderRadius: 12, border: "0.5px solid #ddd", background: "#f5f5f5" },
   };
 
-  if (loading) return <div style={{ ...s.wrap, textAlign: "center", paddingTop: 80, color: "#666" }}>불러오는 중...</div>;
+  if (loading) return <div style={{ textAlign: "center", paddingTop: 80, color: "#666", fontFamily: "sans-serif" }}>불러오는 중...</div>;
 
+  // 로그인
   if (page === "login") return (
     <div style={s.wrap}>
       <div style={{ maxWidth: 400, margin: "40px auto" }}>
-        <h1 style={{ ...s.title, fontSize: 22, textAlign: "center", marginBottom: 8 }}>JTBC 보도국 장비대여 시스템</h1>
-        <p style={{ textAlign: "center", fontSize: 14, color: "#666", marginBottom: 28 }}>사내 촬영 장비 대여 관리</p>
+        <h1 style={{ fontSize: 22, fontWeight: 500, textAlign: "center", marginBottom: 4 }}>JTBC 보도국 장비대여 시스템</h1>
+        <p style={{ textAlign: "center", fontSize: 12, color: "#aaa", marginBottom: 28 }}>{VERSION}</p>
         <div style={s.tabs}>
           <button style={s.tab(authTab === "login")} onClick={() => { setAuthTab("login"); setError(""); }}>로그인</button>
           <button style={s.tab(authTab === "register")} onClick={() => { setAuthTab("register"); setError(""); }}>회원가입</button>
@@ -446,7 +430,7 @@ export default function App() {
           </div>
         )}
         {notice ? (
-          <div style={{ marginTop: 32, padding: "14px 18px", borderRadius: 12, border: "0.5px solid #ddd", background: "#f5f5f5" }}>
+          <div style={{ ...s.noticeBox, marginTop: 32 }}>
             <p style={{ fontSize: 12, color: "#666", marginBottom: 6, marginTop: 0 }}>공지</p>
             <p style={{ fontSize: 14, whiteSpace: "pre-wrap", margin: 0 }}>{notice}</p>
           </div>
@@ -455,17 +439,24 @@ export default function App() {
     </div>
   );
 
+  // 관리자
   if (page === "admin") {
     const pending = rentals.filter(r => r.status === "pending");
     const active  = rentals.filter(r => r.status === "approved");
     const totalAvail = equipment.reduce((sum, eq) => sum + availableQty(equipment, rentals, eq.id, null, null), 0);
+    const filteredEquip = equipment.filter(eq => adminCatFilter === "전체" || eq.category === adminCatFilter);
+
     return (
       <div style={s.wrap}>
         {confirmDeleteEq && <DeleteModal eq={equipment.find(e => e.id === confirmDeleteEq)} onClose={() => setConfirmDeleteEq(null)} onConfirm={() => handleDeleteEquipment(confirmDeleteEq)} s={s} />}
         {actionModal && <ActionModal actionModal={actionModal} onClose={() => setActionModal(null)} onConfirm={handleAction} s={s} />}
         {showPwModal && <PwModal currentPassword={currentUser.password} onClose={() => setShowPwModal(false)} onConfirm={handleChangePw} s={s} />}
+
         <div style={s.header}>
-          <div>          <h1 style={s.title}>JTBC 보도국 장비대여 시스템</h1><span style={{ fontSize: 13, color: "#666" }}>관리자 · {currentUser.name}</span></div>
+          <div>
+            <h1 style={s.title}>JTBC 보도국 장비대여 시스템</h1>
+            <span style={{ fontSize: 13, color: "#666" }}>관리자 · {currentUser.name}</span>
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button style={s.btn} onClick={() => setShowPwModal(true)}>비밀번호 변경</button>
             <button style={s.btn} onClick={() => { setCurrentUser(null); setPage("login"); }}>로그아웃</button>
@@ -535,12 +526,14 @@ export default function App() {
                 <button key={c} style={s.catFilter(adminCatFilter === c)} onClick={() => setAdminCatFilter(c)}>{c}</button>
               ))}
             </div>
-            {equipment.filter(eq => adminCatFilter === "전체" || eq.category === adminCatFilter).map((eq, index) => {
+
+            {filteredEquip.map((eq, index) => {
               const avail  = availableQty(equipment, rentals, eq.id, null, null);
               const rented = qtyByStatus(rentals, eq.id, ["approved"]);
               const pend   = qtyByStatus(rentals, eq.id, ["pending"]);
               const inUse  = rented > 0 || pend > 0;
               const isEditing = editEquipId === eq.id;
+              const realIndex = equipment.findIndex(e => e.id === eq.id);
               return (
                 <div key={eq.id} style={{ ...s.card, marginBottom: 10 }}>
                   {isEditing ? (
@@ -567,14 +560,14 @@ export default function App() {
                           <span style={{ fontSize: 12, color: "#666", background: "#f5f5f5", padding: "2px 8px", borderRadius: 4 }}>{eq.category}</span>
                           <span style={s.qtyBadge(avail, eq.quantity)}>현재 가용 {avail}/{eq.quantity}대</span>
                           {rented > 0 && <span style={{ fontSize: 12, color: "#993C1D" }}>대여 중 {rented}대</span>}
-                          {pend > 0  && <span style={{ fontSize: 12, color: "#854F0B" }}>대기 {pend}대</span>}
+                          {pend > 0 && <span style={{ fontSize: 12, color: "#854F0B" }}>대기 {pend}대</span>}
                         </div>
                         {eq.description && <p style={{ fontSize: 13, color: "#666", margin: "4px 0 0" }}>{eq.description}</p>}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                          <button style={{ ...s.btnSm, padding: "2px 8px", fontSize: 11 }} onClick={() => handleMoveEquip(index, "up")} disabled={index === 0}>▲</button>
-                          <button style={{ ...s.btnSm, padding: "2px 8px", fontSize: 11 }} onClick={() => handleMoveEquip(index, "down")} disabled={index === equipment.length - 1}>▼</button>
+                          <button style={{ ...s.btnSm, padding: "2px 8px", fontSize: 11 }} onClick={() => handleMoveEquip(realIndex, "up")} disabled={realIndex === 0}>▲</button>
+                          <button style={{ ...s.btnSm, padding: "2px 8px", fontSize: 11 }} onClick={() => handleMoveEquip(realIndex, "down")} disabled={realIndex === equipment.length - 1}>▼</button>
                         </div>
                         <button style={s.btnSm} onClick={() => { setEditEquipId(eq.id); setEditEquipForm({ name: eq.name, category: eq.category, description: eq.description || "" }); }}>편집</button>
                         <label style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap" }}>수량</label>
@@ -591,15 +584,13 @@ export default function App() {
 
         {adminTab === "rentals" && (
           <div>
-            {[{ key: "pending", list: pending }, { key: "approved", list: active }].map(function(item) {
-              return (
-                <div key={item.key} style={{ marginBottom: 24 }}>
-                  <p style={{ fontWeight: 500, fontSize: 15, marginBottom: 10 }}>{RENTAL_STATUS[item.key].label} ({item.list.length})</p>
-                  {item.list.length === 0 && <p style={{ fontSize: 14, color: "#666" }}>없음</p>}
-                  {item.list.map(r => <RentalCard key={r.id} r={r} s={s} onOpenAction={(type, id) => setActionModal({ type, rentalId: id })} onReturn={handleReturn} />)}
-                </div>
-              );
-            })}
+            {[{ key: "pending", list: pending }, { key: "approved", list: active }].map(item => (
+              <div key={item.key} style={{ marginBottom: 24 }}>
+                <p style={{ fontWeight: 500, fontSize: 15, marginBottom: 10 }}>{RENTAL_STATUS[item.key].label} ({item.list.length})</p>
+                {item.list.length === 0 && <p style={{ fontSize: 14, color: "#666" }}>없음</p>}
+                {item.list.map(r => <RentalCard key={r.id} r={r} s={s} onOpenAction={(type, id) => setActionModal({ type, rentalId: id })} onReturn={handleReturn} />)}
+              </div>
+            ))}
           </div>
         )}
 
@@ -614,18 +605,24 @@ export default function App() {
     );
   }
 
+  // 대여자
   if (page === "user") {
     const activeCart = cartItems.length > 0;
     const activeRentals = myRentals.filter(r => r.status === "pending" || r.status === "approved").length;
     const startDate = rentalDates.start;
     const endDate = rentalDates.end;
     const datesSelected = startDate && endDate && endDate >= startDate;
+    const filteredEquip = equipment.filter(eq => userCatFilter === "전체" || eq.category === userCatFilter);
+    const currentlyRented = rentals.filter(r => r.status === "approved");
 
     return (
       <div style={s.wrap}>
         {showPwModal && <PwModal currentPassword={currentUser.password} onClose={() => setShowPwModal(false)} onConfirm={handleChangePw} s={s} />}
         <div style={s.header}>
-          <div><h1 style={s.title}>📷 장비 대여 시스템</h1><span style={{ fontSize: 13, color: "#666" }}>{currentUser.name} ({currentUser.department})</span></div>
+          <div>
+            <h1 style={s.title}>JTBC 보도국 장비대여 시스템</h1>
+            <span style={{ fontSize: 13, color: "#666" }}>{currentUser.name} ({currentUser.department})</span>
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button style={s.btn} onClick={() => setShowPwModal(true)}>비밀번호 변경</button>
             <button style={s.btn} onClick={() => { setCurrentUser(null); setPage("login"); }}>로그아웃</button>
@@ -638,7 +635,9 @@ export default function App() {
           <button style={s.tab(userTab === "equipment")} onClick={() => setUserTab("equipment")}>
             장비 목록{activeCart ? <span style={{ background: "#185FA5", color: "#fff", borderRadius: 99, fontSize: 11, padding: "1px 6px", marginLeft: 5 }}>{cartItems.length}</span> : null}
           </button>
-          <button style={s.tab(userTab === "status")} onClick={() => setUserTab("status")}>대여 현황</button>
+          <button style={s.tab(userTab === "status")} onClick={() => setUserTab("status")}>
+            대여 현황{currentlyRented.length > 0 ? <span style={{ background: "#993C1D", color: "#fff", borderRadius: 99, fontSize: 11, padding: "1px 6px", marginLeft: 5 }}>{currentlyRented.length}</span> : null}
+          </button>
           <button style={s.tab(userTab === "myrentals")} onClick={() => setUserTab("myrentals")}>
             내 대여 현황{activeRentals > 0 ? <span style={{ background: "#185FA5", color: "#fff", borderRadius: 99, fontSize: 11, padding: "1px 6px", marginLeft: 5 }}>{activeRentals}</span> : null}
           </button>
@@ -646,6 +645,12 @@ export default function App() {
 
         {userTab === "equipment" && (
           <div>
+            {notice ? (
+              <div style={s.noticeBox}>
+                <p style={{ fontSize: 12, color: "#666", marginBottom: 4, marginTop: 0 }}>공지</p>
+                <p style={{ fontSize: 14, whiteSpace: "pre-wrap", margin: 0 }}>{notice}</p>
+              </div>
+            ) : null}
             <div style={{ marginBottom: 16, padding: "14px 18px", borderRadius: 12, border: datesSelected ? "1px solid #185FA5" : "0.5px solid #ccc", background: "#f1efe8" }}>
               <p style={{ fontWeight: 500, fontSize: 14, margin: "0 0 10px" }}>대여 기간 먼저 선택하세요</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -654,13 +659,15 @@ export default function App() {
               </div>
               {datesSelected && <p style={{ fontSize: 12, color: "#185FA5", margin: "8px 0 0" }}>선택 기간 기준으로 대여 가능 수량이 표시됩니다.</p>}
             </div>
+
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
               {["전체", ...CATEGORIES].map(c => (
                 <button key={c} style={s.catFilter(userCatFilter === c)} onClick={() => setUserCatFilter(c)}>{c}</button>
               ))}
             </div>
+
             <div style={{ marginBottom: 20 }}>
-              {equipment.filter(eq => userCatFilter === "전체" || eq.category === userCatFilter).map(eq => {
+              {filteredEquip.map(eq => {
                 const avail = datesSelected
                   ? availableQty(equipment, rentals, eq.id, startDate, endDate)
                   : availableQty(equipment, rentals, eq.id, null, null);
@@ -694,6 +701,7 @@ export default function App() {
                 );
               })}
             </div>
+
             {activeCart && datesSelected && (
               <div style={{ ...s.card, border: "1px solid #185FA5" }}>
                 <p style={{ fontWeight: 500, fontSize: 14, marginBottom: 12, color: "#185FA5" }}>대여 신청 ({cartItems.length}종)</p>
@@ -712,6 +720,31 @@ export default function App() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {userTab === "status" && (
+          <div>
+            {currentlyRented.length === 0 && (
+              <p style={{ fontSize: 14, color: "#666" }}>현재 대여 중인 장비가 없습니다.</p>
+            )}
+            {currentlyRented.map(r => (
+              <div key={r.id} style={s.card}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
+                  {r.items && r.items.map(i => (
+                    <span key={i.equipmentId} style={{ display: "inline-block", fontSize: 13, background: "#faece7", color: "#993C1D", borderRadius: 4, padding: "2px 10px", fontWeight: 500 }}>{i.equipmentName} {i.qty}대</span>
+                  ))}
+                </div>
+                <div style={{ fontSize: 13, color: "#666", marginBottom: 6 }}>
+                  대여 기간: <span style={{ color: "#111", fontWeight: 500 }}>{r.start_date} ~ {r.end_date}</span>
+                </div>
+                <div style={{ display: "flex", gap: 16, fontSize: 13, color: "#666", flexWrap: "wrap" }}>
+                  <span>담당자: <span style={{ color: "#111" }}>{r.user_name}</span></span>
+                  <span>부서: <span style={{ color: "#111" }}>{r.user_department || "-"}</span></span>
+                  <span>연락처: <span style={{ color: "#111" }}>{r.user_phone}</span></span>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
