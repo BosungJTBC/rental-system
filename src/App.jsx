@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
-const VERSION = "v25";
-const today = () => new Date().toISOString().split("T")[0];
-const TODAY = new Date().toISOString().split("T")[0];
+const LAST_UPDATED = "2026-04-17 17:30";
 const CATEGORIES = ["카메라", "렌즈", "마이크", "삼각대", "조명", "특수장비", "기타"];
 
 const RENTAL_STATUS = {
@@ -372,7 +370,7 @@ export default function App() {
     <div style={s.wrap}>
       <div style={{ maxWidth: 420, margin: "40px auto" }}>
         <h1 style={{ fontSize: isMobile ? 18 : 22, fontWeight: 500, textAlign: "center", marginBottom: 4 }}>JTBC 보도국 장비대여 시스템</h1>
-        <p style={{ textAlign: "center", fontSize: 12, color: "#aaa", marginBottom: 28 }}>{VERSION}</p>
+        <p style={{ textAlign: "center", fontSize: 12, color: "#aaa", marginBottom: 28 }}>최근 업데이트: {LAST_UPDATED}</p>
         <div style={s.tabs}>
           <button style={s.tab(authTab === "login")} onClick={() => { setAuthTab("login"); setError(""); }}>로그인</button>
           <button style={s.tab(authTab === "register")} onClick={() => { setAuthTab("register"); setError(""); }}>회원가입</button>
