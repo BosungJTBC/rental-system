@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
-const VERSION = "v1.6.0";
+const VERSION = "v24";
 const today = () => new Date().toISOString().split("T")[0];
 const CATEGORIES = ["카메라", "렌즈", "마이크", "삼각대", "조명", "특수장비", "기타"];
 
