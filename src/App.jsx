@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
 const LAST_UPDATED = "2026-04-17 14:20";
+const today = () => new Date().toISOString().split("T")[0];
+const TODAY = new Date().toISOString().split("T")[0];
 const CATEGORIES = ["카메라", "렌즈", "마이크", "삼각대", "조명", "특수장비", "기타"];
 
 const RENTAL_STATUS = {
