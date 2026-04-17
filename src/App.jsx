@@ -377,7 +377,7 @@ export default function App() {
   const myRentals = currentUser ? rentals.filter(r => r.user_id === currentUser.id) : [];
 
   const s = {
-    wrap: { fontFamily: "sans-serif", maxWidth: 800, margin: "0 auto", padding: "24px 16px", color: "#111" },
+    wrap: { fontFamily: "sans-serif", maxWidth: 800, minWidth: 360, margin: "0 auto", padding: "24px 16px", color: "#111", boxSizing: "border-box" },
     header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, paddingBottom: 16, borderBottom: "0.5px solid #ddd" },
     title: { fontSize: 20, fontWeight: 500, margin: 0 },
     btn: { padding: "8px 16px", borderRadius: 8, border: "0.5px solid #ccc", background: "transparent", cursor: "pointer", fontSize: 14, color: "#111" },
