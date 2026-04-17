@@ -180,6 +180,8 @@ export default function App() {
   const [adminTab, setAdminTab] = useState("equipment");
   const [userTab, setUserTab] = useState("equipment");
   const [newEquip, setNewEquip] = useState({ name: "", category: "", description: "", quantity: 1 });
+  const [editEquipId, setEditEquipId] = useState(null);
+  const [editEquipForm, setEditEquipForm] = useState({});
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [confirmDeleteEq, setConfirmDeleteEq] = useState(null);
@@ -191,10 +193,7 @@ export default function App() {
   const [noticeEdit, setNoticeEdit] = useState(false);
   const [noticeDraft, setNoticeDraft] = useState("");
 
-  useEffect(() => {
-    fetchAll();
-  }, []);
-
+  useEffect(() => { fetchAll(); }, []);
   useEffect(() => {
     if (success) { const t = setTimeout(() => setSuccess(""), 2800); return () => clearTimeout(t); }
   }, [success]);
@@ -202,11 +201,19 @@ export default function App() {
   async function fetchAll() {
     setLoading(true);
     const [{ data: eq }, { data: re }, { data: se }] = await Promise.all([
-      supabase.from("equipment").select("*").order("id"),
+      supabase.from("equipment").select("*"),
       supabase.from("rentals").select("*").order("id", { ascending: false }),
       supabase.from("settings").select("*"),
     ]);
-    setEquipment(eq || []);
+    const orderSetting = se && se.find(s => s.key === "equipment_order");
+    let orderedEq = eq || [];
+    if (orderSetting) {
+      try {
+        const order = JSON.parse(orderSetting.value);
+        orderedEq = [...orderedEq].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+      } catch {}
+    }
+    setEquipment(orderedEq);
     setRentals(re || []);
     const n = se && se.find(s => s.key === "notice");
     setNotice(n ? n.value : "");
@@ -270,6 +277,28 @@ export default function App() {
     await supabase.from("equipment").update({ quantity: n }).eq("id", id);
     setError("");
     await fetchAll();
+  }
+
+  async function handleUpdateEquip(id) {
+    if (!editEquipForm.name || !editEquipForm.category) return setError("장비명과 카테고리를 입력해주세요.");
+    await supabase.from("equipment").update({
+      name: editEquipForm.name,
+      category: editEquipForm.category,
+      description: editEquipForm.description,
+    }).eq("id", id);
+    setEditEquipId(null);
+    setSuccess("장비 정보가 수정되었습니다.");
+    await fetchAll();
+  }
+
+  async function handleMoveEquip(index, direction) {
+    const newList = [...equipment];
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= newList.length) return;
+    [newList[index], newList[swapIndex]] = [newList[swapIndex], newList[index]];
+    const order = newList.map(e => e.id);
+    await supabase.from("settings").upsert([{ key: "equipment_order", value: JSON.stringify(order) }], { onConflict: "key" });
+    setEquipment(newList);
   }
 
   const cartItems = Object.entries(cart).filter(([, q]) => q > 0).map(([id, qty]) => {
@@ -361,7 +390,6 @@ export default function App() {
 
   if (loading) return <div style={{ ...s.wrap, textAlign: "center", paddingTop: 80, color: "#666" }}>불러오는 중...</div>;
 
-  // 로그인
   if (page === "login") return (
     <div style={s.wrap}>
       <div style={{ maxWidth: 400, margin: "40px auto" }}>
@@ -398,7 +426,6 @@ export default function App() {
     </div>
   );
 
-  // 관리자
   if (page === "admin") {
     const pending = rentals.filter(r => r.status === "pending");
     const active  = rentals.filter(r => r.status === "approved");
@@ -458,6 +485,7 @@ export default function App() {
                 </p>
               )}
             </div>
+
             <div style={{ ...s.card, marginBottom: 20 }}>
               <p style={{ fontWeight: 500, fontSize: 14, marginBottom: 12 }}>장비 추가</p>
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 2fr 0.8fr auto", gap: 8, alignItems: "end" }}>
@@ -468,28 +496,51 @@ export default function App() {
                 <button style={{ ...s.btnPrimary, height: 37 }} onClick={handleAddEquipment}>추가</button>
               </div>
             </div>
-            {equipment.map(eq => {
+
+            {equipment.map((eq, index) => {
               const avail  = availableQty(equipment, rentals, eq.id, null, null);
               const rented = qtyByStatus(rentals, eq.id, ["approved"]);
               const pend   = qtyByStatus(rentals, eq.id, ["pending"]);
               const inUse  = rented > 0 || pend > 0;
+              const isEditing = editEquipId === eq.id;
               return (
-                <div key={eq.id} style={{ ...s.card, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={s.row}>
-                      <span style={{ fontWeight: 500 }}>{eq.name}</span>
-                      <span style={{ fontSize: 12, color: "#666", background: "#f5f5f5", padding: "2px 8px", borderRadius: 4 }}>{eq.category}</span>
-                      <span style={s.qtyBadge(avail, eq.quantity)}>현재 가용 {avail}/{eq.quantity}대</span>
-                      {rented > 0 && <span style={{ fontSize: 12, color: "#993C1D" }}>대여 중 {rented}대</span>}
-                      {pend > 0  && <span style={{ fontSize: 12, color: "#854F0B" }}>대기 {pend}대</span>}
+                <div key={eq.id} style={{ ...s.card, marginBottom: 10 }}>
+                  {isEditing ? (
+                    <div>
+                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 2fr", gap: 8, marginBottom: 10 }}>
+                        <div><label style={s.label}>장비명</label><input style={s.input} value={editEquipForm.name} onChange={e => setEditEquipForm(p => ({ ...p, name: e.target.value }))} /></div>
+                        <div><label style={s.label}>카테고리</label><input style={s.input} value={editEquipForm.category} onChange={e => setEditEquipForm(p => ({ ...p, category: e.target.value }))} /></div>
+                        <div><label style={s.label}>설명</label><input style={s.input} value={editEquipForm.description} onChange={e => setEditEquipForm(p => ({ ...p, description: e.target.value }))} /></div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                        <button style={s.btn} onClick={() => setEditEquipId(null)}>취소</button>
+                        <button style={s.btnPrimary} onClick={() => handleUpdateEquip(eq.id)}>저장</button>
+                      </div>
                     </div>
-                    {eq.description && <p style={{ fontSize: 13, color: "#666", margin: "4px 0 0" }}>{eq.description}</p>}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                    <label style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap" }}>수량</label>
-                    <input style={{ ...s.input, width: 64 }} type="number" min="1" value={eq.quantity} onChange={e => handleUpdateQty(eq.id, e.target.value)} />
-                    <button style={{ ...s.btnDanger, opacity: inUse ? 0.4 : 1, cursor: inUse ? "not-allowed" : "pointer" }} onClick={() => { if (!inUse) setConfirmDeleteEq(eq.id); }}>삭제</button>
-                  </div>
+                  ) : (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={s.row}>
+                          <span style={{ fontWeight: 500 }}>{eq.name}</span>
+                          <span style={{ fontSize: 12, color: "#666", background: "#f5f5f5", padding: "2px 8px", borderRadius: 4 }}>{eq.category}</span>
+                          <span style={s.qtyBadge(avail, eq.quantity)}>현재 가용 {avail}/{eq.quantity}대</span>
+                          {rented > 0 && <span style={{ fontSize: 12, color: "#993C1D" }}>대여 중 {rented}대</span>}
+                          {pend > 0  && <span style={{ fontSize: 12, color: "#854F0B" }}>대기 {pend}대</span>}
+                        </div>
+                        {eq.description && <p style={{ fontSize: 13, color: "#666", margin: "4px 0 0" }}>{eq.description}</p>}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                          <button style={{ ...s.btnSm, padding: "2px 8px", fontSize: 11 }} onClick={() => handleMoveEquip(index, "up")} disabled={index === 0}>▲</button>
+                          <button style={{ ...s.btnSm, padding: "2px 8px", fontSize: 11 }} onClick={() => handleMoveEquip(index, "down")} disabled={index === equipment.length - 1}>▼</button>
+                        </div>
+                        <button style={s.btnSm} onClick={() => { setEditEquipId(eq.id); setEditEquipForm({ name: eq.name, category: eq.category, description: eq.description || "" }); }}>편집</button>
+                        <label style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap" }}>수량</label>
+                        <input style={{ ...s.input, width: 64 }} type="number" min="1" value={eq.quantity} onChange={e => handleUpdateQty(eq.id, e.target.value)} />
+                        <button style={{ ...s.btnDanger, opacity: inUse ? 0.4 : 1, cursor: inUse ? "not-allowed" : "pointer" }} onClick={() => { if (!inUse) setConfirmDeleteEq(eq.id); }}>삭제</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -521,7 +572,6 @@ export default function App() {
     );
   }
 
-  // 대여자
   if (page === "user") {
     const activeCart = cartItems.length > 0;
     const activeRentals = myRentals.filter(r => r.status === "pending" || r.status === "approved").length;
