@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 
 const VERSION = "v25";
 const today = () => new Date().toISOString().split("T")[0];
+const TODAY = new Date().toISOString().split("T")[0];
 const CATEGORIES = ["카메라", "렌즈", "마이크", "삼각대", "조명", "특수장비", "기타"];
 
 const RENTAL_STATUS = {
@@ -650,8 +651,8 @@ export default function App() {
             <div style={{ marginBottom: 16, padding: "14px 16px", borderRadius: 12, border: datesSelected ? "1px solid #185FA5" : "0.5px solid #ccc", background: "#f1efe8" }}>
               <p style={{ fontWeight: 500, fontSize: 14, margin: "0 0 10px" }}>대여 기간 먼저 선택하세요</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div><label style={s.label}>대여 시작일</label><input style={s.input} type="date" value={startDate} min={today()} onChange={e => { setRentalDates(p => ({ ...p, start: e.target.value })); setCart({}); }} /></div>
-                <div><label style={s.label}>반납 예정일</label><input style={s.input} type="date" value={endDate} min={startDate || today()} onChange={e => { setRentalDates(p => ({ ...p, end: e.target.value })); setCart({}); }} /></div>
+                <div><label style={s.label}>대여 시작일</label><input style={s.input} type="date" value={startDate} min={TODAY} onChange={e => { setRentalDates(p => ({ ...p, start: e.target.value })); setCart({}); }} /></div>
+                <div><label style={s.label}>반납 예정일</label><input style={s.input} type="date" value={endDate} min={startDate || TODAY} onChange={e => { setRentalDates(p => ({ ...p, end: e.target.value })); setCart({}); }} /></div>
               </div>
               {datesSelected && <p style={{ fontSize: 12, color: "#185FA5", margin: "8px 0 0" }}>선택 기간 기준으로 대여 가능 수량이 표시됩니다.</p>}
             </div>
