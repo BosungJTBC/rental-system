@@ -39,7 +39,9 @@ function qtyByStatus(rentals, equipId, statuses) {
 
 // 반응형 훅
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const [isMobile, setIsMobile] = useState(() => {
+    try { return window.innerWidth < 640; } catch { return false; }
+  });
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 640);
     window.addEventListener("resize", handler);
