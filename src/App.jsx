@@ -600,7 +600,7 @@ export default function App() {
       <div style={s.wrap}>
         {showPwModal && <PwModal currentPassword={currentUser.password} onClose={() => setShowPwModal(false)} onConfirm={handleChangePw} s={s} />}
         <div style={s.header}>
-          <div><h1 style={s.title}>📷 장비 대여 시스템</h1><span style={{ fontSize: 13, color: "#666" }}>{currentUser.name} ({currentUser.department})</span></div>
+          <div><h1 style={s.title}>📷 JTBC 보도국 | 장비 대여 시스템</h1><span style={{ fontSize: 13, color: "#666" }}>{currentUser.name} ({currentUser.department})</span></div>
           <div style={{ display: "flex", gap: 8 }}>
             <button style={s.btn} onClick={() => setShowPwModal(true)}>비밀번호 변경</button>
             <button style={s.btn} onClick={() => { setCurrentUser(null); setPage("login"); }}>로그아웃</button>
