@@ -742,7 +742,7 @@ export default function App() {
                   ))}
                 </div>
                 <div style={{ marginBottom: 4, fontSize: 13, color: "#666" }}>기간: {startDate} ~ {endDate}</div>
-                <div style={{ marginBottom: 12, marginTop: 10 }}><label style={s.label}>메모 (선택)</label><input style={s.input} placeholder="촬영 목적 등" value={rentalNote} onChange={e => setRentalNote(e.target.value)} /></div>
+                <div style={{ marginBottom: 12, marginTop: 10 }}><label style={s.label}>메모 (선택)</label><input style={s.input} placeholder="추가 악세서리 및 촬영 목적 등 ex) 베터리 1개, 카메라 케이지 포함. 인터뷰 촬영용" value={rentalNote} onChange={e => setRentalNote(e.target.value)} /></div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button style={{ ...s.btnPrimary, flex: 1, opacity: submitting ? 0.6 : 1 }} onClick={handleRentalRequest} disabled={submitting}>{submitting ? "신청 중..." : "신청하기"}</button>
                   <button style={s.btn} onClick={() => setCart({})}>초기화</button>
