@@ -177,8 +177,17 @@ function RentalCard({ r, s, onOpenAction, onReturn, onCancel, isHistory, isUser 
 
 export default function App() {
   const isMobile = useIsMobile();
-  const [currentUser, setCurrentUser] = useState(null);
-  const [page, setPage] = useState("login");
+  const [currentUser, setCurrentUser] = useState(() => {
+    try { const u = localStorage.getItem("currentUser"); return u ? JSON.parse(u) : null; } catch { return null; }
+  });
+  const [page, setPage] = useState(() => {
+    try {
+      const u = localStorage.getItem("currentUser");
+      if (!u) return "login";
+      const user = JSON.parse(u);
+      return user.role === "admin" ? "admin" : "user";
+    } catch { return "login"; }
+  });
   const [equipment, setEquipment] = useState([]);
   const [rentals, setRentals] = useState([]);
   const [notice, setNotice] = useState("");
@@ -202,7 +211,7 @@ export default function App() {
   const [cart, setCart] = useState({});
   const [rentalDates, setRentalDates] = useState({ start: "", end: "" });
   const [rentalNote, setRentalNote] = useState("");
-  const [noticeEdit, setNoticeEdit] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [noticeDraft, setNoticeDraft] = useState("");
 
   useEffect(() => { fetchAll(); }, []);
@@ -238,6 +247,7 @@ export default function App() {
     setError("");
     const { data, error } = await supabase.from("users").select("*").eq("phone", loginForm.phone).eq("password", loginForm.password).single();
     if (error || !data) return setError("전화번호 또는 비밀번호가 올바르지 않습니다.");
+    localStorage.setItem("currentUser", JSON.stringify(data));
     setCurrentUser(data); setPage(data.role === "admin" ? "admin" : "user");
   }
 
@@ -305,6 +315,8 @@ export default function App() {
   });
 
   async function handleRentalRequest() {
+    if (submitting) return;
+    setSubmitting(true);
     setError("");
     if (cartItems.length === 0) return setError("신청할 장비를 선택해주세요.");
     if (!rentalDates.start || !rentalDates.end) return setError("대여 시작일과 반납 예정일을 입력해주세요.");
@@ -359,7 +371,9 @@ export default function App() {
 
   async function handleChangePw(newPw) {
     await supabase.from("users").update({ password: newPw }).eq("id", currentUser.id);
-    setCurrentUser(prev => ({ ...prev, password: newPw }));
+    const updated = { ...currentUser, password: newPw };
+    localStorage.setItem("currentUser", JSON.stringify(updated));
+    setCurrentUser(updated);
     setShowPwModal(false); setSuccess("비밀번호가 변경되었습니다.");
   }
 
@@ -448,7 +462,7 @@ export default function App() {
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button style={s.btn} onClick={() => setShowPwModal(true)}>비밀번호 변경</button>
-            <button style={s.btn} onClick={() => { setCurrentUser(null); setPage("login"); }}>로그아웃</button>
+            <button style={s.btn} onClick={() => { localStorage.removeItem("currentUser"); setCurrentUser(null); setPage("login"); }}>로그아웃</button>
           </div>
         </div>
         {success && <div style={s.alert("success")}>{success}</div>}
@@ -646,7 +660,7 @@ export default function App() {
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button style={s.btn} onClick={() => setShowPwModal(true)}>비밀번호 변경</button>
-            <button style={s.btn} onClick={() => { setCurrentUser(null); setPage("login"); }}>로그아웃</button>
+            <button style={s.btn} onClick={() => { localStorage.removeItem("currentUser"); setCurrentUser(null); setPage("login"); }}>로그아웃</button>
           </div>
         </div>
         {success && <div style={s.alert("success")}>{success}</div>}
@@ -733,7 +747,7 @@ export default function App() {
                 <div style={{ marginBottom: 4, fontSize: 13, color: "#666" }}>기간: {startDate} ~ {endDate}</div>
                 <div style={{ marginBottom: 12, marginTop: 10 }}><label style={s.label}>메모 (선택)</label><input style={s.input} placeholder="촬영 목적 등" value={rentalNote} onChange={e => setRentalNote(e.target.value)} /></div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button style={{ ...s.btnPrimary, flex: 1 }} onClick={handleRentalRequest}>신청하기</button>
+                  <button style={{ ...s.btnPrimary, flex: 1, opacity: submitting ? 0.6 : 1 }} onClick={handleRentalRequest} disabled={submitting}>{submitting ? "신청 중..." : "신청하기"}</button>
                   <button style={s.btn} onClick={() => setCart({})}>초기화</button>
                 </div>
               </div>
