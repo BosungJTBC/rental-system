@@ -5,10 +5,9 @@ import emailjs from "@emailjs/browser";
 const EMAILJS_SERVICE_ID = "service_rb3wtur";
 const EMAILJS_TEMPLATE_ID = "template_whajf2c";
 const EMAILJS_PUBLIC_KEY = "XbVNihc2de5h98peh";
-
 emailjs.init(EMAILJS_PUBLIC_KEY);
 
-const LAST_UPDATED = "2026-04-17 14:35";
+const LAST_UPDATED = "2026-04-21 14:20";
 const today = () => new Date().toISOString().split("T")[0];
 const TODAY = new Date().toISOString().split("T")[0];
 const CATEGORIES = ["카메라", "렌즈", "마이크", "삼각대", "조명", "특수장비", "기타"];
@@ -46,7 +45,6 @@ function qtyByStatus(rentals, equipId, statuses) {
     .reduce((sum, r) => sum + (r.items.find(i => i.equipmentId === equipId)?.qty || 0), 0);
 }
 
-// 반응형 훅
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => {
     try { return window.innerWidth < 640; } catch { return false; }
@@ -177,6 +175,7 @@ function RentalCard({ r, s, onOpenAction, onReturn, onCancel, isHistory, isUser 
 
 export default function App() {
   const isMobile = useIsMobile();
+
   const [currentUser, setCurrentUser] = useState(() => {
     try { const u = localStorage.getItem("currentUser"); return u ? JSON.parse(u) : null; } catch { return null; }
   });
@@ -184,15 +183,14 @@ export default function App() {
     try {
       const u = localStorage.getItem("currentUser");
       if (!u) return "login";
-      const user = JSON.parse(u);
-      return user.role === "admin" ? "admin" : "user";
+      return JSON.parse(u).role === "admin" ? "admin" : "user";
     } catch { return "login"; }
   });
+
   const [equipment, setEquipment] = useState([]);
   const [rentals, setRentals] = useState([]);
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
-
   const [loginForm, setLoginForm] = useState({ phone: "", password: "" });
   const [registerForm, setRegisterForm] = useState({ name: "", department: "", phone: "", password: "" });
   const [authTab, setAuthTab] = useState("login");
@@ -211,10 +209,9 @@ export default function App() {
   const [cart, setCart] = useState({});
   const [rentalDates, setRentalDates] = useState({ start: "", end: "" });
   const [rentalNote, setRentalNote] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [noticeEdit, setNoticeEdit] = useState(false);
   const [noticeDraft, setNoticeDraft] = useState("");
-  const [noticeDraft, setNoticeDraft] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
   useEffect(() => {
@@ -243,6 +240,12 @@ export default function App() {
     setRentals(re || []);
     setNotice(se?.find(s => s.key === "notice")?.value || "");
     setLoading(false);
+  }
+
+  function logout() {
+    localStorage.removeItem("currentUser");
+    setCurrentUser(null);
+    setPage("login");
   }
 
   async function handleLogin() {
@@ -320,12 +323,12 @@ export default function App() {
     if (submitting) return;
     setSubmitting(true);
     setError("");
-    if (cartItems.length === 0) return setError("신청할 장비를 선택해주세요.");
-    if (!rentalDates.start || !rentalDates.end) return setError("대여 시작일과 반납 예정일을 입력해주세요.");
-    if (rentalDates.end < rentalDates.start) return setError("반납 예정일은 시작일 이후여야 합니다.");
+    if (cartItems.length === 0) { setSubmitting(false); return setError("신청할 장비를 선택해주세요."); }
+    if (!rentalDates.start || !rentalDates.end) { setSubmitting(false); return setError("대여 시작일과 반납 예정일을 입력해주세요."); }
+    if (rentalDates.end < rentalDates.start) { setSubmitting(false); return setError("반납 예정일은 시작일 이후여야 합니다."); }
     for (const item of cartItems) {
       const avail = availableQty(equipment, rentals, item.equipmentId, rentalDates.start, rentalDates.end);
-      if (item.qty > avail) return setError(item.equipmentName + " 해당 기간 가용 수량(" + avail + "대)을 초과했습니다.");
+      if (item.qty > avail) { setSubmitting(false); return setError(item.equipmentName + " 해당 기간 가용 수량(" + avail + "대)을 초과했습니다."); }
     }
     const { error } = await supabase.from("rentals").insert([{
       user_id: currentUser.id, user_name: currentUser.name,
@@ -333,9 +336,7 @@ export default function App() {
       items: cartItems, start_date: rentalDates.start, end_date: rentalDates.end,
       note: rentalNote, status: "pending",
     }]);
-    if (error) return setError("신청 중 오류가 발생했습니다.");
-
-    // 이메일 발송
+    if (error) { setSubmitting(false); return setError("신청 중 오류가 발생했습니다."); }
     try {
       await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
         user_name: currentUser.name,
@@ -346,11 +347,10 @@ export default function App() {
         end_date: rentalDates.end,
         note: rentalNote || "-",
       }, EMAILJS_PUBLIC_KEY);
-    } catch (e) {
-      console.error("이메일 발송 실패:", e);
-    }
+    } catch (e) { console.error("이메일 발송 실패:", e); }
     setCart({}); setRentalNote(""); setRentalDates({ start: "", end: "" });
-    setSuccess("대여 신청이 완료되었습니다."); setUserTab("myrentals"); await fetchAll();
+    setSuccess("대여 신청이 완료되었습니다."); setUserTab("myrentals");
+    setSubmitting(false); await fetchAll();
   }
 
   async function handleAction(memo) {
@@ -382,7 +382,7 @@ export default function App() {
   const myRentals = currentUser ? rentals.filter(r => r.user_id === currentUser.id) : [];
 
   const s = {
-    wrap: { fontFamily: "sans-serif", width: "100%", maxWidth: 1100, minWidth: 0, minHeight: "100vh", margin: "0 auto", padding: isMobile ? "16px 12px" : "24px 32px", color: "#111", boxSizing: "border-box", textAlign: "left" },
+    wrap: { fontFamily: "sans-serif", width: "100%", maxWidth: 1100, minHeight: "100vh", margin: "0 auto", padding: isMobile ? "16px 12px" : "24px 32px", color: "#111", boxSizing: "border-box", textAlign: "left" },
     header: { display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 10 : 0, marginBottom: 24, paddingBottom: 16, borderBottom: "0.5px solid #ddd" },
     title: { fontSize: isMobile ? 16 : 20, fontWeight: 500, margin: 0 },
     btn: { padding: "8px 14px", borderRadius: 8, border: "0.5px solid #ccc", background: "transparent", cursor: "pointer", fontSize: isMobile ? 13 : 14, color: "#111", whiteSpace: "nowrap" },
@@ -407,7 +407,6 @@ export default function App() {
 
   if (loading) return <div style={{ textAlign: "center", paddingTop: 80, color: "#666", fontFamily: "sans-serif" }}>불러오는 중...</div>;
 
-  // 로그인
   if (page === "login") return (
     <div style={s.wrap}>
       <div style={{ maxWidth: 420, margin: "40px auto" }}>
@@ -444,7 +443,6 @@ export default function App() {
     </div>
   );
 
-  // 관리자
   if (page === "admin") {
     const pending = rentals.filter(r => r.status === "pending");
     const active  = rentals.filter(r => r.status === "approved");
@@ -464,7 +462,7 @@ export default function App() {
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button style={s.btn} onClick={() => setShowPwModal(true)}>비밀번호 변경</button>
-            <button style={s.btn} onClick={() => { localStorage.removeItem("currentUser"); setCurrentUser(null); setPage("login"); }}>로그아웃</button>
+            <button style={s.btn} onClick={logout}>로그아웃</button>
           </div>
         </div>
         {success && <div style={s.alert("success")}>{success}</div>}
@@ -487,7 +485,7 @@ export default function App() {
         </div>
 
         {adminTab === "equipment" && (
-          <div>
+          <div style={{ width: "100%" }}>
             <div style={{ ...s.card, marginBottom: 12, borderColor: noticeEdit ? "#185FA5" : "#e0e0e0" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <p style={{ fontWeight: 500, fontSize: 14, margin: 0 }}>초기화면 공지</p>
@@ -586,30 +584,28 @@ export default function App() {
                       </div>
                     </div>
                   ) : (
-                    <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={s.row}>
-                            <span style={{ fontWeight: 500 }}>{eq.name}</span>
-                            <span style={{ fontSize: 12, color: "#666", background: "#f5f5f5", padding: "2px 8px", borderRadius: 4 }}>{eq.category}</span>
-                            <span style={s.qtyBadge(avail, eq.quantity)}>가용 {avail}/{eq.quantity}대</span>
-                            {rented > 0 && <span style={{ fontSize: 12, color: "#993C1D" }}>대여 중 {rented}대</span>}
-                            {pend > 0 && <span style={{ fontSize: 12, color: "#854F0B" }}>대기 {pend}대</span>}
-                          </div>
-                          {eq.description && <p style={{ fontSize: 13, color: "#666", margin: "4px 0 0" }}>{eq.description}</p>}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={s.row}>
+                          <span style={{ fontWeight: 500 }}>{eq.name}</span>
+                          <span style={{ fontSize: 12, color: "#666", background: "#f5f5f5", padding: "2px 8px", borderRadius: 4 }}>{eq.category}</span>
+                          <span style={s.qtyBadge(avail, eq.quantity)}>가용 {avail}/{eq.quantity}대</span>
+                          {rented > 0 && <span style={{ fontSize: 12, color: "#993C1D" }}>대여 중 {rented}대</span>}
+                          {pend > 0 && <span style={{ fontSize: 12, color: "#854F0B" }}>대기 {pend}대</span>}
                         </div>
-                        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-end" : "center", gap: 6, flexShrink: 0 }}>
-                          <div style={{ display: "flex", gap: 4 }}>
-                            <button style={{ ...s.btnSm, padding: "2px 8px", fontSize: 11 }} onClick={() => handleMoveEquip(realIndex, "up")} disabled={realIndex === 0}>▲</button>
-                            <button style={{ ...s.btnSm, padding: "2px 8px", fontSize: 11 }} onClick={() => handleMoveEquip(realIndex, "down")} disabled={realIndex === equipment.length - 1}>▼</button>
-                          </div>
-                          <button style={s.btnSm} onClick={() => { setEditEquipId(eq.id); setEditEquipForm({ name: eq.name, category: eq.category, description: eq.description || "" }); }}>편집</button>
-                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                            <label style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap" }}>수량</label>
-                            <input style={{ ...s.input, width: 56 }} type="number" min="1" value={eq.quantity} onChange={e => handleUpdateQty(eq.id, e.target.value)} />
-                          </div>
-                          <button style={{ ...s.btnDanger, opacity: inUse ? 0.4 : 1, cursor: inUse ? "not-allowed" : "pointer" }} onClick={() => { if (!inUse) setConfirmDeleteEq(eq.id); }}>삭제</button>
+                        {eq.description && <p style={{ fontSize: 13, color: "#666", margin: "4px 0 0" }}>{eq.description}</p>}
+                      </div>
+                      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-end" : "center", gap: 6, flexShrink: 0 }}>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button style={{ ...s.btnSm, padding: "2px 8px", fontSize: 11 }} onClick={() => handleMoveEquip(realIndex, "up")} disabled={realIndex === 0}>▲</button>
+                          <button style={{ ...s.btnSm, padding: "2px 8px", fontSize: 11 }} onClick={() => handleMoveEquip(realIndex, "down")} disabled={realIndex === equipment.length - 1}>▼</button>
                         </div>
+                        <button style={s.btnSm} onClick={() => { setEditEquipId(eq.id); setEditEquipForm({ name: eq.name, category: eq.category, description: eq.description || "" }); }}>편집</button>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <label style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap" }}>수량</label>
+                          <input style={{ ...s.input, width: 56 }} type="number" min="1" value={eq.quantity} onChange={e => handleUpdateQty(eq.id, e.target.value)} />
+                        </div>
+                        <button style={{ ...s.btnDanger, opacity: inUse ? 0.4 : 1, cursor: inUse ? "not-allowed" : "pointer" }} onClick={() => { if (!inUse) setConfirmDeleteEq(eq.id); }}>삭제</button>
                       </div>
                     </div>
                   )}
@@ -620,7 +616,7 @@ export default function App() {
         )}
 
         {adminTab === "rentals" && (
-          <div>
+          <div style={{ width: "100%" }}>
             {[{ key: "pending", list: pending }, { key: "approved", list: active }].map(item => (
               <div key={item.key} style={{ marginBottom: 24 }}>
                 <p style={{ fontWeight: 500, fontSize: 15, marginBottom: 10 }}>{RENTAL_STATUS[item.key].label} ({item.list.length})</p>
@@ -632,7 +628,7 @@ export default function App() {
         )}
 
         {adminTab === "history" && (
-          <div>
+          <div style={{ width: "100%" }}>
             <p style={{ fontWeight: 500, fontSize: 15, marginBottom: 12 }}>전체 대여 히스토리 ({rentals.length}건)</p>
             {rentals.length === 0 && <p style={{ fontSize: 14, color: "#666" }}>내역이 없습니다.</p>}
             {rentals.map(r => <RentalCard key={r.id} r={r} s={s} isHistory />)}
@@ -642,7 +638,6 @@ export default function App() {
     );
   }
 
-  // 대여자
   if (page === "user") {
     const activeCart = cartItems.length > 0;
     const activeRentals = myRentals.filter(r => r.status === "pending" || r.status === "approved").length;
@@ -662,7 +657,7 @@ export default function App() {
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button style={s.btn} onClick={() => setShowPwModal(true)}>비밀번호 변경</button>
-            <button style={s.btn} onClick={() => { localStorage.removeItem("currentUser"); setCurrentUser(null); setPage("login"); }}>로그아웃</button>
+            <button style={s.btn} onClick={logout}>로그아웃</button>
           </div>
         </div>
         {success && <div style={s.alert("success")}>{success}</div>}
