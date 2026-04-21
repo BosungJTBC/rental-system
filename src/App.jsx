@@ -212,6 +212,8 @@ export default function App() {
   const [rentalDates, setRentalDates] = useState({ start: "", end: "" });
   const [rentalNote, setRentalNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [noticeEdit, setNoticeEdit] = useState(false);
+  const [noticeDraft, setNoticeDraft] = useState("");
   const [noticeDraft, setNoticeDraft] = useState("");
 
   useEffect(() => { fetchAll(); }, []);
