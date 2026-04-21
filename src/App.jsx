@@ -133,8 +133,10 @@ function DeleteModal({ eq, onClose, onConfirm, s }) {
   );
 }
 
-function RentalCard({ r, s, onOpenAction, onReturn, onCancel, isHistory, isUser }) {
+function RentalCard({ r, s, onOpenAction, onReturn, onCancel, onUpdateMemo, isHistory, isUser }) {
   const st = RENTAL_STATUS[r.status] || { label: r.status, bg: "#f1efe8", color: "#444" };
+  const [editingMemo, setEditingMemo] = useState(false);
+  const [memoDraft, setMemoDraft] = useState(r.admin_memo || "");
   return (
     <div style={{ ...s.card, marginBottom: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
@@ -154,11 +156,35 @@ function RentalCard({ r, s, onOpenAction, onReturn, onCancel, isHistory, isUser 
             {r.note && <span style={{ marginLeft: 8 }}>/ 메모: {r.note}</span>}
             {r.returned_at && <span style={{ marginLeft: 8 }}>/ 반납: {r.returned_at}</span>}
           </div>
-          {r.admin_memo && (
-            <div style={{ marginTop: 8, padding: "7px 12px", borderRadius: 8, background: "#f5f5f5", fontSize: 13 }}>
-              <span style={{ color: "#666", marginRight: 6 }}>관리자 메모:</span>{r.admin_memo}
-            </div>
-          )}
+          <div style={{ marginTop: 8 }}>
+            {editingMemo ? (
+              <div>
+                <textarea
+                  style={{ ...s.input, resize: "vertical", minHeight: 60, fontFamily: "sans-serif", marginBottom: 6 }}
+                  value={memoDraft}
+                  onChange={e => setMemoDraft(e.target.value)}
+                  autoFocus
+                />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button style={s.btnPrimary} onClick={() => { onUpdateMemo(r.id, memoDraft); setEditingMemo(false); }}>저장</button>
+                  <button style={s.btn} onClick={() => { setMemoDraft(r.admin_memo || ""); setEditingMemo(false); }}>취소</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {r.admin_memo ? (
+                  <div style={{ padding: "7px 12px", borderRadius: 8, background: "#f5f5f5", fontSize: 13, flex: 1 }}>
+                    <span style={{ color: "#666", marginRight: 6 }}>관리자 메모:</span>{r.admin_memo}
+                  </div>
+                ) : null}
+                {!isUser && !isHistory && (
+                  <button style={s.btnSm} onClick={() => { setMemoDraft(r.admin_memo || ""); setEditingMemo(true); }}>
+                    {r.admin_memo ? "메모 수정" : "메모 추가"}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
           {isUser && r.status === "pending" && <button style={s.btnDanger} onClick={() => onCancel(r.id)}>신청 취소</button>}
@@ -359,6 +385,11 @@ export default function App() {
     await supabase.from("rentals").update({ status: newStatus, admin_memo: memo }).eq("id", actionModal.rentalId);
     setSuccess(actionModal.type === "approve" ? "승인되었습니다." : "반려되었습니다.");
     setActionModal(null); await fetchAll();
+  }
+
+  async function handleUpdateMemo(id, memo) {
+    await supabase.from("rentals").update({ admin_memo: memo }).eq("id", id);
+    setSuccess("메모가 수정되었습니다."); await fetchAll();
   }
 
   async function handleReturn(id) {
@@ -621,7 +652,7 @@ export default function App() {
               <div key={item.key} style={{ marginBottom: 24 }}>
                 <p style={{ fontWeight: 500, fontSize: 15, marginBottom: 10 }}>{RENTAL_STATUS[item.key].label} ({item.list.length})</p>
                 {item.list.length === 0 && <p style={{ fontSize: 14, color: "#666" }}>없음</p>}
-                {item.list.map(r => <RentalCard key={r.id} r={r} s={s} onOpenAction={(type, id) => setActionModal({ type, rentalId: id })} onReturn={handleReturn} />)}
+                {item.list.map(r => <RentalCard key={r.id} r={r} s={s} onOpenAction={(type, id) => setActionModal({ type, rentalId: id })} onReturn={handleReturn} onUpdateMemo={handleUpdateMemo} />)}
               </div>
             ))}
           </div>
