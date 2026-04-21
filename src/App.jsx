@@ -770,6 +770,11 @@ export default function App() {
                   <span>부서: <span style={{ color: "#111" }}>{r.user_department || "-"}</span></span>
                   <span>연락처: <span style={{ color: "#111" }}>{r.user_phone}</span></span>
                 </div>
+                {r.note && (
+                  <div style={{ fontSize: 13, color: "#666", marginTop: 6 }}>
+                    메모: <span style={{ color: "#111" }}>{r.note}</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>
