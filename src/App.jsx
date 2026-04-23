@@ -35,7 +35,9 @@ function qtyOverlapping(rentals, equipId, statuses, startDate, endDate) {
 function availableQty(equipment, rentals, equipId, startDate, endDate) {
   const eq = equipment.find(e => e.id === equipId);
   if (!eq) return 0;
-  return eq.quantity - qtyOverlapping(rentals, equipId, ["approved", "pending"], startDate, endDate);
+  const s = startDate || TODAY;
+  const e = endDate || TODAY;
+  return eq.quantity - qtyOverlapping(rentals, equipId, ["approved", "pending"], s, e);
 }
 
 function qtyByStatus(rentals, equipId, statuses) {
