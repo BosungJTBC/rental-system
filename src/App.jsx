@@ -32,12 +32,45 @@ function qtyOverlapping(rentals, equipId, statuses, startDate, endDate) {
     .reduce((sum, r) => sum + (r.items.find(i => i.equipmentId === equipId)?.qty || 0), 0);
 }
 
+function maxOverlapping(rentals, equipId, statuses, startDate, endDate) {
+  // 신청 기간 내 모든 날짜를 순회하며 최대 동시 대여 수량 계산
+  const relevantRentals = rentals.filter(r =>
+    statuses.includes(r.status) &&
+    r.items?.some(i => i.equipmentId === equipId) &&
+    datesOverlap(r.start_date, r.end_date, startDate, endDate)
+  );
+  if (relevantRentals.length === 0) return 0;
+
+  // 겹치는 대여들의 모든 날짜 경계점 수집
+  const dates = new Set();
+  relevantRentals.forEach(r => {
+    dates.add(r.start_date);
+    dates.add(r.end_date);
+  });
+  dates.add(startDate);
+  dates.add(endDate);
+
+  // 각 날짜별 동시 대여 수량 계산 후 최댓값 반환
+  let max = 0;
+  for (const date of dates) {
+    if (date < startDate || date > endDate) continue;
+    const count = relevantRentals.reduce((sum, r) => {
+      if (r.start_date <= date && r.end_date >= date) {
+        return sum + (r.items.find(i => i.equipmentId === equipId)?.qty || 0);
+      }
+      return sum;
+    }, 0);
+    if (count > max) max = count;
+  }
+  return max;
+}
+
 function availableQty(equipment, rentals, equipId, startDate, endDate) {
   const eq = equipment.find(e => e.id === equipId);
   if (!eq) return 0;
   const s = startDate || TODAY;
   const e = endDate || TODAY;
-  return eq.quantity - qtyOverlapping(rentals, equipId, ["approved", "pending"], s, e);
+  return eq.quantity - maxOverlapping(rentals, equipId, ["approved", "pending"], s, e);
 }
 
 function qtyByStatus(rentals, equipId, statuses) {
