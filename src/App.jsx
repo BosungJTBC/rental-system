@@ -235,9 +235,9 @@ export default function App() {
   const [cart, setCart] = useState({});
   const [rentalDates, setRentalDates] = useState({ start: "", end: "" });
   const [rentalNote, setRentalNote] = useState("");
-  const [noticeEdit, setNoticeEdit] = useState(false);
-  const [noticeDraft, setNoticeDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [noticeDraft, setNoticeDraft] = useState("");
+  const [returnConfirmId, setReturnConfirmId] = useState(null);
 
   useEffect(() => { fetchAll(); }, []);
   useEffect(() => {
@@ -483,6 +483,16 @@ export default function App() {
     return (
       <div style={s.wrap}>
         {confirmDeleteEq && <DeleteModal eq={equipment.find(e => e.id === confirmDeleteEq)} onClose={() => setConfirmDeleteEq(null)} onConfirm={() => handleDeleteEquipment(confirmDeleteEq)} s={s} />}
+        {returnConfirmId && (
+          <ModalWrap onClose={() => setReturnConfirmId(null)}>
+            <p style={{ fontWeight: 500, fontSize: 16, marginBottom: 8 }}>반납 확인</p>
+            <p style={{ fontSize: 14, color: "#666", marginBottom: 20 }}>정말 반납 처리하시겠습니까?</p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button style={s.btn} onClick={() => setReturnConfirmId(null)}>취소</button>
+              <button style={s.btnPrimary} onClick={() => { handleReturn(returnConfirmId); setReturnConfirmId(null); }}>확인</button>
+            </div>
+          </ModalWrap>
+        )}
         {actionModal && <ActionModal actionModal={actionModal} onClose={() => setActionModal(null)} onConfirm={handleAction} s={s} />}
         {showPwModal && <PwModal currentPassword={currentUser.password} onClose={() => setShowPwModal(false)} onConfirm={handleChangePw} s={s} />}
 
@@ -652,7 +662,7 @@ export default function App() {
               <div key={item.key} style={{ marginBottom: 24 }}>
                 <p style={{ fontWeight: 500, fontSize: 15, marginBottom: 10 }}>{RENTAL_STATUS[item.key].label} ({item.list.length})</p>
                 {item.list.length === 0 && <p style={{ fontSize: 14, color: "#666" }}>없음</p>}
-                {item.list.map(r => <RentalCard key={r.id} r={r} s={s} onOpenAction={(type, id) => setActionModal({ type, rentalId: id })} onReturn={handleReturn} onUpdateMemo={handleUpdateMemo} />)}
+                {item.list.map(r => <RentalCard key={r.id} r={r} s={s} onOpenAction={(type, id) => setActionModal({ type, rentalId: id })} onReturn={(id) => setReturnConfirmId(id)} onUpdateMemo={handleUpdateMemo} />)}
               </div>
             ))}
           </div>
