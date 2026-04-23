@@ -7,8 +7,7 @@ const EMAILJS_TEMPLATE_ID = "template_whajf2c";
 const EMAILJS_PUBLIC_KEY = "XbVNihc2de5h98peh";
 emailjs.init(EMAILJS_PUBLIC_KEY);
 
-const LAST_UPDATED = "2026-04-21 14:20";
-const today = () => new Date().toISOString().split("T")[0];
+const LAST_UPDATED = "2026-04-23 14:20";
 const TODAY = new Date().toISOString().split("T")[0];
 const CATEGORIES = ["카메라", "렌즈", "마이크", "삼각대", "조명", "특수장비", "기타"];
 
@@ -159,12 +158,8 @@ function RentalCard({ r, s, onOpenAction, onReturn, onCancel, onUpdateMemo, isHi
           <div style={{ marginTop: 8 }}>
             {editingMemo ? (
               <div>
-                <textarea
-                  style={{ ...s.input, resize: "vertical", minHeight: 60, fontFamily: "sans-serif", marginBottom: 6 }}
-                  value={memoDraft}
-                  onChange={e => setMemoDraft(e.target.value)}
-                  autoFocus
-                />
+                <textarea style={{ ...s.input, resize: "vertical", minHeight: 60, fontFamily: "sans-serif", marginBottom: 6 }}
+                  value={memoDraft} onChange={e => setMemoDraft(e.target.value)} autoFocus />
                 <div style={{ display: "flex", gap: 6 }}>
                   <button style={s.btnPrimary} onClick={() => { onUpdateMemo(r.id, memoDraft); setEditingMemo(false); }}>저장</button>
                   <button style={s.btn} onClick={() => { setMemoDraft(r.admin_memo || ""); setEditingMemo(false); }}>취소</button>
@@ -230,14 +225,15 @@ export default function App() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [confirmDeleteEq, setConfirmDeleteEq] = useState(null);
+  const [returnConfirmId, setReturnConfirmId] = useState(null);
   const [showPwModal, setShowPwModal] = useState(false);
   const [actionModal, setActionModal] = useState(null);
   const [cart, setCart] = useState({});
   const [rentalDates, setRentalDates] = useState({ start: "", end: "" });
   const [rentalNote, setRentalNote] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [noticeEdit, setNoticeEdit] = useState(false);
   const [noticeDraft, setNoticeDraft] = useState("");
-  const [returnConfirmId, setReturnConfirmId] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
   useEffect(() => {
@@ -347,8 +343,7 @@ export default function App() {
 
   async function handleRentalRequest() {
     if (submitting) return;
-    setSubmitting(true);
-    setError("");
+    setSubmitting(true); setError("");
     if (cartItems.length === 0) { setSubmitting(false); return setError("신청할 장비를 선택해주세요."); }
     if (!rentalDates.start || !rentalDates.end) { setSubmitting(false); return setError("대여 시작일과 반납 예정일을 입력해주세요."); }
     if (rentalDates.end < rentalDates.start) { setSubmitting(false); return setError("반납 예정일은 시작일 이후여야 합니다."); }
@@ -387,11 +382,6 @@ export default function App() {
     setActionModal(null); await fetchAll();
   }
 
-  async function handleUpdateMemo(id, memo) {
-    await supabase.from("rentals").update({ admin_memo: memo }).eq("id", id);
-    setSuccess("메모가 수정되었습니다."); await fetchAll();
-  }
-
   async function handleReturn(id) {
     await supabase.from("rentals").update({ status: "returned", returned_at: new Date().toLocaleString("ko-KR") }).eq("id", id);
     setSuccess("반납이 확인되었습니다."); await fetchAll();
@@ -408,6 +398,11 @@ export default function App() {
     localStorage.setItem("currentUser", JSON.stringify(updated));
     setCurrentUser(updated);
     setShowPwModal(false); setSuccess("비밀번호가 변경되었습니다.");
+  }
+
+  async function handleUpdateMemo(id, memo) {
+    await supabase.from("rentals").update({ admin_memo: memo }).eq("id", id);
+    setSuccess("메모가 수정되었습니다."); await fetchAll();
   }
 
   const myRentals = currentUser ? rentals.filter(r => r.user_id === currentUser.id) : [];
